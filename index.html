@@ -346,9 +346,21 @@ function buildSheet(id) {
 }
 
 // Init sheets
+let selCache = {};
+function rebuildSelCache(){
+  const cache = {};
+  document.querySelectorAll('select[data-sheet]').forEach(sel => {
+    const sheet = sel.dataset.sheet, row = sel.dataset.row, week = sel.dataset.week;
+    if (!cache[sheet]) cache[sheet] = {};
+    if (!cache[sheet][row]) cache[sheet][row] = {};
+    cache[sheet][row][week] = sel;
+  });
+  return cache;
+}
 (function(){
   const c = document.getElementById('sheetContainer');
   c.innerHTML = ALL_SHEETS.map(buildSheet).join('');
+  selCache = rebuildSelCache();
   
   // Init week selector
   const ws = document.getElementById('weekSelector');
@@ -405,17 +417,21 @@ function recalc(sheet) {
   let totalH = 0;
   let currentWeekH = 0;
   const maxRows = studentCount[sheet] || TOTAL_STUDENT;
+  const sheetCache = selCache[sheet] || {};
   
   for (let i = 1; i <= maxRows; i++) {
     let rowH = 0;
-    const sels = document.querySelectorAll(`select[data-sheet="${sheet}"][data-row="${i}"]`);
-    sels.forEach(s => { if (s.value === 'H') rowH++; });
+    const rowCache = sheetCache[i] || {};
+    for (let w = 1; w <= TOTAL_WEEK; w++) {
+      const sel = rowCache[w];
+      if (sel && sel.value === 'H') rowH++;
+    }
     const rowEl = document.getElementById(`rowt_${sheet}_${i}`);
     if (rowEl) rowEl.textContent = rowH;
     totalH += rowH;
     
     // Count current week only
-    const currentWeekSel = document.querySelector(`select[data-sheet="${sheet}"][data-row="${i}"][data-week="${currentWeek}"]`);
+    const currentWeekSel = rowCache[currentWeek];
     if (currentWeekSel && currentWeekSel.value === 'H') currentWeekH++;
   }
   
@@ -443,18 +459,19 @@ function updateOverallStats() {
   // Calculate all sheets (not units) - each sheet is unique
   ALL_SHEETS.forEach(sheet => {
     const sheetRows = studentCount[sheet] || TOTAL_STUDENT;
+    const sheetCache = selCache[sheet] || {};
     
-    // Current week total for this sheet
     for (let i = 1; i <= sheetRows; i++) {
-      const currentWeekSel = document.querySelector(`select[data-sheet="${sheet}"][data-row="${i}"][data-week="${currentWeek}"]`);
-      if (currentWeekSel && currentWeekSel.value === 'H') currentWeekAllTotal++;
+      const rowCache = sheetCache[i] || {};
+      // Current week
+      const cw = rowCache[currentWeek];
+      if (cw && cw.value === 'H') currentWeekAllTotal++;
       currentWeekAllCount++;
-    }
-    
-    // Cumulative total for this sheet
-    for (let i = 1; i <= sheetRows; i++) {
-      const sels = document.querySelectorAll(`select[data-sheet="${sheet}"][data-row="${i}"]`);
-      sels.forEach(s => { if (s.value === 'H') cumulativeAllTotal++; });
+      // Cumulative
+      for (let w = 1; w <= TOTAL_WEEK; w++) {
+        const sel = rowCache[w];
+        if (sel && sel.value === 'H') cumulativeAllTotal++;
+      }
     }
     cumulativeAllCount += sheetRows * TOTAL_WEEK;
   });
@@ -490,8 +507,10 @@ function updateTingkatStats() {
     // Count for this tingkat across ALL units in current week
     sheetNames.forEach(sheet => {
       const sheetRows = studentCount[sheet] || TOTAL_STUDENT;
+      const sheetCache = selCache[sheet] || {};
       for (let i = 1; i <= sheetRows; i++) {
-        const sel = document.querySelector(`select[data-sheet="${sheet}"][data-row="${i}"][data-week="${currentWeek}"]`);
+        const rowCache = sheetCache[i] || {};
+        const sel = rowCache[currentWeek];
         if (sel) {
           // Only count if there's actual data (H or T selected)
           if (sel.value === 'H' || sel.value === 'T') {
@@ -553,7 +572,7 @@ async function initAppData() {
   if (savedBadge) {
     window.elementSdk.setConfig({ school_badge: savedBadge });
   }
-  showSheet('T1');
+  showSheet(UNITS[activeUnit][0]);
   lucide.createIcons();
 }
 
@@ -721,6 +740,13 @@ function addStudent(sheet) {
   rowHTML += `<td class="px-2 py-1.5 text-center"><button onclick="showDeleteConfirm('${sheet}', ${newNum})" class="delete-btn" style="border:none;background:none;padding:2px;cursor:pointer;opacity:0.5;transition:opacity .15s;color:#94a3b8" onmouseover="this.style.opacity='1';this.style.color='#ef4444'" onmouseout="this.style.opacity='0.5';this.style.color='#94a3b8'"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></td>`;
   newRow.innerHTML = rowHTML;
   table.appendChild(newRow);
+  
+  // Daftar select baru dalam cache
+  if (!selCache[sheet]) selCache[sheet] = {};
+  if (!selCache[sheet][newNum]) selCache[sheet][newNum] = {};
+  newRow.querySelectorAll('select[data-week]').forEach(sel => {
+    selCache[sheet][newNum][sel.dataset.week] = sel;
+  });
   
   lucide.createIcons();
   recalc(sheet);
