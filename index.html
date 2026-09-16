@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="ms" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Rekod Kehadiran Kokurikulum</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+html,body{height:100%;margin:0}
+*{font-family:'Plus Jakarta Sans',sans-serif}
+::-webkit-scrollbar{height:6px;width:6px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+td[contenteditable]{outline:none;text-align:left;padding:6px 8px;min-height:24px}
+td[contenteditable]:focus{background:#dbeafe;border-radius:4px;color:#1e40af}
+select{border:1px solid #cbd5e1;border-radius:6px;padding:6px 8px;font-size:13px;background:#ffffff;color:#1e293b;cursor:pointer;transition:all .15s}
+select:focus{outline:2px solid #3b82f6;border-color:#3b82f6}
+select option[value="H"]:checked{background:#22c55e;color:white}
+select[value="H"]{background:#22c55e;color:white;border-color:#16a34a}
+.delete-btn{cursor:pointer;opacity:0.5;transition:opacity .15s;color:#94a3b8}
+.delete-btn:hover{opacity:1;color:#ef4444}
+.tab-btn{transition:all .15s;white-space:nowrap;border-bottom:3px solid transparent}
+.tab-btn.active{border-bottom-color:currentColor;background:transparent}
+.stat-card{background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;transition:all .2s}
+.stat-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.05);border-color:#cbd5e1}
+@media print{.no-print{display:none!important}}
+@media (max-width:640px){
+  .px-6{padding-left:1rem;padding-right:1rem}
+  #tabBar{gap:0.75rem;overflow-x:auto;padding-bottom:0.75rem;padding-left:0.5rem;padding-right:0.5rem}
+  .tab-btn{font-size:13px;padding:0.75rem 1rem!important}
+  table{font-size:11px}
+  td,th{padding:4px 3px}
+  td[contenteditable]{min-width:60px;padding:4px}
+  select{padding:4px 6px;font-size:11px}
+  .grid{gap:0.5rem}
+  .stat-card{padding:10px;font-size:12px}
+}
+</style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-slate-50 overflow-auto">
+  <div id="loginScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f2d7a,#1a56db);padding:20px;">
+    <div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <div style="text-align:center;margin-bottom:22px;">
+        <div style="font-size:20px;font-weight:800;color:#0f172a;">Rekod Kehadiran Kokurikulum</div>
+        <div style="font-size:12px;color:#64748b;">Cloud Edition</div>
+      </div>
+      <div id="loginErr" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px;"></div>
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;">NAMA PENGGUNA</div>
+      <input id="lgUser" type="text" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #cbd5e1;margin-bottom:12px;font-size:14px;" autocomplete="username">
+      <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;">KATA LALUAN</div>
+      <input id="lgPass" type="password" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #cbd5e1;margin-bottom:16px;font-size:14px;" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <button onclick="doLogin()" style="width:100%;padding:12px;background:#1a56db;color:#fff;border:none;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;">Log Masuk →</button>
+    </div>
+  </div>
+
+  <div id="pwScreen" style="display:none;min-height:100vh;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f2d7a,#1a56db);padding:20px;">
+    <div style="background:#fff;border-radius:16px;padding:32px 28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+      <div style="font-size:17px;font-weight:800;margin-bottom:6px;">Set Kata Laluan Baru</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:16px;">Kali pertama log masuk — sila tetapkan kata laluan baru.</div>
+      <div id="pwErr" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:12px;"></div>
+      <input id="pwNew" type="password" placeholder="Kata laluan baru (min. 6 aksara)" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #cbd5e1;margin-bottom:10px;font-size:14px;">
+      <input id="pwConf" type="password" placeholder="Sahkan kata laluan" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #cbd5e1;margin-bottom:16px;font-size:14px;">
+      <button onclick="submitNewPw()" style="width:100%;padding:12px;background:#1a56db;color:#fff;border:none;border-radius:8px;font-weight:800;font-size:14px;cursor:pointer;">Simpan & Teruskan →</button>
+    </div>
+  </div>
+
+  <div id="app" class="w-full min-h-full" style="background:#f8fafc;display:none">
+   <!-- Header Navigation -->
+   <div class="sticky top-0 z-40" style="background:#ffffff;border-bottom:1px solid #e2e8f0">
+    <div class="px-6 py-4 flex items-center justify-between">
+     <div class="flex items-center gap-4">
+      <div id="schoolBadgeContainer" class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer hover:opacity-80 transition" style="background:linear-gradient(135deg, #3b82f6, #2563eb)" onclick="document.getElementById('badgeUpload').click()" title="Klik untuk ubah lencana"><i data-lucide="clipboard-check" style="width:24px;height:24px;color:white"></i>
+      </div><input type="file" id="badgeUpload" accept="image/*" style="display:none" onchange="handleBadgeUpload(event)">
+      <div class="flex flex-col gap-1 flex-1">
+       <p id="schoolName" contenteditable="true" style="color:#64748b;font-size:12px;font-weight:600;margin:0;padding:2px 4px;border-radius:3px;outline:none" onblur="updateSchoolName(this.textContent)" onkeypress="if(event.key==='Enter'){event.preventDefault();this.blur()}">Sekolah</p>
+       <h1 id="mainTitle" class="text-lg sm:text-2xl font-bold" style="color:#1e293b;margin:0">Rekod Kehadiran Kokurikulum</h1>
+      </div>
+     </div><button onclick="doLogout()" class="p-2 rounded-lg hover:bg-red-50 transition" style="border:1px solid #fca5a5;background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;cursor:pointer;padding:6px 10px;margin-right:6px;">Log Keluar</button><button onclick="document.getElementById('resetOverlay').classList.remove('hidden')" class="p-2 rounded-lg hover:bg-slate-100 transition" style="border:none;background:none;cursor:pointer"><i data-lucide="trash-2" style="width:20px;height:20px;color:#94a3b8"></i></button>
+    </div><!-- Controls Row -->
+    <div class="px-6 pb-4 pt-2 border-t border-slate-100">
+     <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+      <!-- Unit Selector -->
+      <div class="flex items-center gap-3">
+       <span style="color:#64748b;font-size:13px;font-weight:600">Unit:</span>
+       <div class="flex gap-2 bg-slate-100 p-1 rounded-lg">
+        <button onclick="switchUnit('PERSATUAN')" class="px-3 py-1.5 rounded-md text-sm font-medium transition" id="btn-PERSATUAN" style="background:#3b82f6;color:white;border:none;cursor:pointer">Persatuan</button> <button onclick="switchUnit('BERUNIFORM')" class="px-3 py-1.5 rounded-md text-sm font-medium transition" id="btn-BERUNIFORM" style="background:transparent;color:#64748b;border:none;cursor:pointer">Beruniform</button> <button onclick="switchUnit('SUKAN')" class="px-3 py-1.5 rounded-md text-sm font-medium transition" id="btn-SUKAN" style="background:transparent;color:#64748b;border:none;cursor:pointer">Sukan</button>
+       </div>
+      </div><!-- Week Selector -->
+      <div class="flex items-center gap-3">
+       <span style="color:#64748b;font-size:13px;font-weight:600">Minggu:</span> <select id="weekSelector" onchange="changeWeek(this.value)" style="border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;font-size:13px;background:#ffffff;color:#1e293b"></select> <button onclick="addWeek()" class="px-2.5 py-1.5 rounded-md text-sm font-medium transition flex items-center gap-1.5" style="background:#22c55e;color:white;border:none;cursor:pointer"><i data-lucide="plus" style="width:16px;height:16px"></i></button> <button onclick="deleteWeek()" class="px-2.5 py-1.5 rounded-md text-sm font-medium transition flex items-center gap-1.5" style="background:#ef4444;color:white;border:none;cursor:pointer"><i data-lucide="minus" style="width:16px;height:16px"></i></button>
+      </div>
+     </div><!-- Stats Grid -->
+     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div class="stat-card">
+       <div style="color:#64748b;font-size:12px;margin-bottom:6px">
+        Hadir (Minggu Ini)
+       </div>
+       <div style="color:#3b82f6;font-size:18px;font-weight:700" id="all_week_total">
+        0
+       </div>
+      </div>
+      <div class="stat-card">
+       <div style="color:#64748b;font-size:12px;margin-bottom:6px">
+        Hadir (Terkumpul)
+       </div>
+       <div style="color:#3b82f6;font-size:18px;font-weight:700" id="all_cumulative_total">
+        0
+       </div>
+      </div>
+      <div class="stat-card">
+       <div style="color:#64748b;font-size:12px;margin-bottom:6px">
+        Minggu Semasa
+       </div>
+       <div style="color:#3b82f6;font-size:18px;font-weight:700" id="current_week">
+        M1
+       </div>
+      </div>
+      <div class="stat-card">
+       <div style="color:#64748b;font-size:12px;margin-bottom:6px">
+        Keseluruhan
+       </div>
+       <div style="color:#3b82f6;font-size:18px;font-weight:700" id="overall_grand">
+        0.0%
+       </div>
+      </div>
+     </div><!-- Tingkat Stats -->
+     <div class="rounded-lg border border-slate-200 p-4" style="background:#ffffff">
+      <div style="color:#64748b;font-size:12px;font-weight:600;margin-bottom:10px">
+       Hadir Berdasarkan Tahun/Tingkatan (Minggu Ini)
+      </div>
+      <div class="grid grid-cols-4 sm:grid-cols-7 gap-2" id="tingkatStats"></div>
+     </div>
+    </div>
+   </div><!-- Tabs -->
+   <div class="px-2 sm:px-6 py-3 border-b border-slate-200 no-print overflow-x-auto flex gap-1" id="tabBar" style="background:#ffffff">
+   </div><!-- Content area -->
+   <div class="px-2 sm:px-6 py-6" style="background:#f8fafc">
+    <div id="sheetContainer"></div>
+   </div><!-- Reset confirmation overlay -->
+   <div id="resetOverlay" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+     <div class="flex items-center gap-3 mb-3">
+      <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center"><i data-lucide="alert-triangle" style="width:20px;height:20px;color:#ef4444"></i>
+      </div>
+      <h3 class="font-semibold text-gray-900 text-lg">Padam Semua Rekod?</h3>
+     </div>
+     <p class="text-gray-600 text-sm mb-5">Tindakan ini akan memadam semua data kehadiran dan tidak boleh dibatalkan.</p>
+     <div class="flex gap-2 justify-end"><button onclick="closeReset()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition">Batal</button> <button onclick="confirmReset()" class="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition">Ya, Padam</button>
+     </div>
+    </div>
+   </div><!-- Toast -->
+   <div id="toast" class="fixed bottom-6 right-6 bg-emerald-600 text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 transition-all translate-y-20 opacity-0 z-50"><i data-lucide="check-circle" style="width:16px;height:16px"></i> <span id="toastMsg"></span>
+   </div>
+  </div>
+  <script>
+  var SB_URL='https://aowzftmdriukxbltjtpm.supabase.co';
+  var SB_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvd3pmdG1kcml1a3hibHRqdHBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NzAxOTQsImV4cCI6MjA5NDQ0NjE5NH0.17lKaGC-9jx1cDORx2btwfmzDYon3s3CN2dei2BM-Ac';
+  var K2_SKEY='kokum2_sess_v1';
+  var K2_SESS=null, K2_CU=null, K2_KOD=null;
+
+  function getKodFromUrl(){
+    var m = new URLSearchParams(window.location.search).get('t');
+    return m ? m.trim() : null;
+  }
+  function saveK2Sess(){ localStorage.setItem(K2_SKEY, JSON.stringify(K2_SESS)); }
+  function loadK2Sess(){ try{ return JSON.parse(localStorage.getItem(K2_SKEY)); }catch(e){ return null; } }
+  function clearK2Sess(){ localStorage.removeItem(K2_SKEY); }
+
+  function makeEmail(username, kodSekolah){
+    var u = username.trim().toLowerCase().replace(/[^a-z0-9_.]/g,'');
+    var k = kodSekolah.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+    return u+'.'+k+'@cikgukita.internal';
+  }
+
+  async function sbFetch(path, opts){
+    opts = opts || {};
+    var headers = Object.assign({'apikey':SB_ANON_KEY,'Content-Type':'application/json'}, opts.headers||{});
+    headers['Authorization'] = 'Bearer ' + ((K2_SESS && K2_SESS.access_token) ? K2_SESS.access_token : SB_ANON_KEY);
+    return fetch(SB_URL+path, Object.assign({}, opts, {headers:headers}));
+  }
+
+  async function doLogin(){
+    var u = document.getElementById('lgUser').value.trim();
+    var p = document.getElementById('lgPass').value;
+    var errEl = document.getElementById('loginErr');
+    errEl.style.display='none';
+    var kod = getKodFromUrl();
+    if(!kod){ errEl.textContent='URL tiada kod sekolah (?t=KODSEKOLAH).'; errEl.style.display='block'; return; }
+    if(!u || !p){ errEl.textContent='Sila isi nama pengguna dan kata laluan.'; errEl.style.display='block'; return; }
+    var email = makeEmail(u, kod);
+    try{
+      var res = await fetch(SB_URL+'/auth/v1/token?grant_type=password', {
+        method:'POST',
+        headers:{'apikey':SB_ANON_KEY,'Content-Type':'application/json'},
+        body: JSON.stringify({email:email, password:p})
+      });
+      var d = await res.json();
+      if(!res.ok){ errEl.textContent = d.msg || d.error_description || 'ID atau kata laluan tidak sah.'; errEl.style.display='block'; return; }
+      K2_SESS = {access_token:d.access_token, refresh_token:d.refresh_token, user_id:d.user.id};
+      saveK2Sess();
+      await afterLogin();
+    }catch(e){
+      errEl.textContent = 'Ralat sambungan. Cuba lagi.'; errEl.style.display='block';
+    }
+  }
+
+  async function afterLogin(){
+    var res = await sbFetch('/rest/v1/kokum2_users?select=username,fullname,role,kod_sekolah,must_change_password&user_id=eq.'+K2_SESS.user_id, {method:'GET'});
+    var rows = await res.json();
+    if(!rows || !rows[0]){ document.getElementById('loginErr').textContent='Akaun tidak dijumpai untuk app ini.'; document.getElementById('loginErr').style.display='block'; return; }
+    K2_CU = rows[0];
+    K2_KOD = K2_CU.kod_sekolah;
+    if(K2_CU.must_change_password){ showPwScreen(); return; }
+    await enterApp();
+  }
+
+  function showPwScreen(){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('pwScreen').style.display='flex';
+  }
+
+  async function submitNewPw(){
+    var nw = document.getElementById('pwNew').value, cf = document.getElementById('pwConf').value;
+    var errEl = document.getElementById('pwErr');
+    errEl.style.display='none';
+    if(nw.length < 6){ errEl.textContent='Kata laluan minimum 6 aksara.'; errEl.style.display='block'; return; }
+    if(nw !== cf){ errEl.textContent='Kata laluan tidak sepadan.'; errEl.style.display='block'; return; }
+    var res = await sbFetch('/auth/v1/user', {method:'PUT', body: JSON.stringify({password:nw})});
+    if(!res.ok){ var d = await res.json(); errEl.textContent = d.msg || 'Gagal tukar kata laluan. Cuba lagi.'; errEl.style.display='block'; return; }
+    await sbFetch('/rest/v1/kokum2_users?user_id=eq.'+K2_SESS.user_id, {method:'PATCH', headers:{'Prefer':'return=minimal'}, body: JSON.stringify({must_change_password:false})});
+    K2_CU.must_change_password = false;
+    await enterApp();
+  }
+
+  async function enterApp(){
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('pwScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    await initAppData();
+  }
+
+  function doLogout(){
+    clearK2Sess();
+    location.reload();
+  }
+
+  async function tryResumeSession(){
+    K2_SESS = loadK2Sess();
+    if(K2_SESS && K2_SESS.access_token){
+      await afterLogin();
+    }
+  }
+  </script>
+  <script>
+const TOTAL_STUDENT = 40;
+let TOTAL_WEEK = 10;
+let currentWeek = 1;
+const UNITS = {
+  'PERSATUAN': ['P_T1','P_T2','P_T3','P_T4','P_T5','P_T6R','P_T6A'],
+  'BERUNIFORM': ['B_T1','B_T2','B_T3','B_T4','B_T5','B_T6R','B_T6A'],
+  'SUKAN': ['S_T1','S_T2','S_T3','S_T4','S_T5','S_T6R','S_T6A']
+};
+const ALL_SHEETS = Object.values(UNITS).flat();
+let activeUnit = 'PERSATUAN';
+let activeSheet = 'T1';
+let studentCount = {};
+
+const defaultConfig = {
+  main_title: 'Sistem Rekod Kehadiran Kokurikulum',
+  background_color: '#f8fafc',
+  surface_color: '#ffffff',
+  text_color: '#1e293b',
+  primary_action: '#3b82f6',
+  secondary_action: '#64748b',
+  font_family: 'Plus Jakarta Sans',
+  font_size: 14
+};
+
+// Build tabs
+function buildTabs() {
+  const bar = document.getElementById('tabBar');
+  bar.innerHTML = '';
+  const sheets = UNITS[activeUnit] || [];
+  sheets.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn px-4 py-2.5 text-sm font-semibold rounded-none transition flex-shrink-0';
+    btn.textContent = s;
+    btn.dataset.sheet = s;
+    btn.style.color = '#94a3b8';
+    btn.onclick = () => showSheet(s);
+    bar.appendChild(btn);
+  });
+  // Reset button
+  const rb = document.createElement('button');
+  rb.className = 'ml-auto px-4 py-2.5 text-sm font-medium rounded-none transition flex items-center gap-2 flex-shrink-0 no-print';
+  rb.innerHTML = '<i data-lucide="trash-2" style="width:16px;height:16px"></i><span class="hidden sm:inline">Reset</span>';
+  rb.style.cssText = 'color:#94a3b8;background:none;border:none;cursor:pointer';
+  rb.onclick = () => document.getElementById('resetOverlay').classList.remove('hidden');
+  bar.appendChild(rb);
+  lucide.createIcons();
+}
+
+// Build sheet HTML
+function buildSheet(id) {
+  let h = `<div class="sheet hidden" id="sheet_${id}">`;
+  h += `<div class="grid grid-cols-2 gap-2 sm:gap-4 mb-4"><div class="flex items-center gap-2 text-xs sm:text-sm p-3 rounded-lg" style="background:#f0f4f8"><i data-lucide="users" style="width:15px;height:15px;color:#64748b"></i><div><div style="color:#64748b;font-size:11px">Hadir (Minggu Semasa)</div><div><strong id="total_${id}" style="color:#1e40af;font-size:16px">0</strong></div></div></div>`;
+  h += `<div class="flex items-center gap-2 text-xs sm:text-sm p-3 rounded-lg" style="background:#f0f4f8"><i data-lucide="percent" style="width:15px;height:15px;color:#64748b"></i><div><div style="color:#64748b;font-size:11px">Peratus</div><div><strong id="pct_${id}" style="color:#1e40af;font-size:16px">0.0%</strong></div></div></div></div>`;
+  h += `<div class="rounded-lg overflow-hidden border border-slate-200" style="background:#ffffff"><div class="overflow-x-auto" style="min-width:0"><table class="text-xs" style="border-collapse:separate;border-spacing:0;width:max-content">`;
+  h += `<thead><tr style="background:#f1f5f9">`;
+  h += `<th class="px-2 py-2 text-left font-semibold sticky left-0 z-10" style="background:#f1f5f9;color:#64748b;width:35px">Bil</th>`;
+  h += `<th class="px-2 py-2 text-left font-semibold" style="color:#64748b;min-width:100px">Nama</th>`;
+  h += `<th class="px-2 py-2 text-left font-semibold" style="color:#64748b;min-width:60px">Kelas</th>`;
+  for (let w = 1; w <= TOTAL_WEEK; w++) h += `<th class="px-1 py-2 font-semibold text-center" style="color:#64748b;width:45px">M${w}</th>`;
+  h += `<th class="px-2 py-2 font-semibold text-center" style="color:#64748b;width:50px">Σ</th>`;
+  h += `<th class="px-2 py-2 font-semibold text-center" style="color:#64748b;width:40px"></th></tr></thead><tbody>`;
+  for (let i = 1; i <= TOTAL_STUDENT; i++) {
+    const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+    h += `<tr style="background:${bg}">`;
+    h += `<td class="px-2 py-1.5 font-medium text-center sticky left-0 z-10" style="background:${bg};color:#94a3b8">${i}</td>`;
+    h += `<td contenteditable="true" class="name-cell" data-sheet="${id}" data-row="${i}" style="color:#1e293b;min-width:80px"></td>`;
+    h += `<td contenteditable="true" class="class-cell" data-sheet="${id}" data-row="${i}" style="color:#1e293b;min-width:50px"></td>`;
+    for (let w = 1; w <= TOTAL_WEEK; w++) {
+      h += `<td class="px-1 py-1 text-center"><select data-sheet="${id}" data-row="${i}" data-week="${w}" onchange="recalc('${id}')"><option value=""></option><option value="H">H</option><option value="T">T</option></select></td>`;
+    }
+    h += `<td class="px-2 py-1.5 text-center font-bold" id="rowt_${id}_${i}" style="color:#1e40af">0</td>`;
+    h += `<td class="px-2 py-1.5 text-center"><button onclick="showDeleteConfirm('${id}', ${i})" class="delete-btn" style="border:none;background:none;padding:2px;cursor:pointer;opacity:0.5;transition:opacity .15s;color:#94a3b8" onmouseover="this.style.opacity='1';this.style.color='#ef4444'" onmouseout="this.style.opacity='0.5';this.style.color='#94a3b8'"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></td>`;
+    h += `</tr>`;
+  }
+  h += `</tbody></table></div></div>`;
+  
+  // Add button to add more students
+  h += `<div class="mt-4 flex gap-2"><button onclick="addStudent('${id}')" class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition flex items-center gap-2"><i data-lucide="plus" style="width:16px;height:16px"></i> Tambah Pelajar</button></div>`;
+  
+  h += `</div>`;
+  return h;
+}
+
+// Init sheets
+(function(){
+  const c = document.getElementById('sheetContainer');
+  c.innerHTML = ALL_SHEETS.map(buildSheet).join('');
+  
+  // Init week selector
+  const ws = document.getElementById('weekSelector');
+  for (let w = 1; w <= TOTAL_WEEK; w++) {
+    const opt = document.createElement('option');
+    opt.value = w;
+    opt.textContent = 'Minggu ' + w;
+    ws.appendChild(opt);
+  }
+  ws.value = 1;
+  
+  // Init student count
+  ALL_SHEETS.forEach(s => { studentCount[s] = TOTAL_STUDENT; });
+  
+  buildTabs();
+})();
+
+function switchUnit(unit) {
+  activeUnit = unit;
+  // Update unit button styles
+  Object.keys(UNITS).forEach(u => {
+    const btn = document.getElementById(`btn-${u}`);
+    if (u === unit) {
+      btn.style.background = '#3b82f6';
+      btn.style.color = 'white';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = '#64748b';
+    }
+  });
+  buildTabs();
+  showSheet(UNITS[unit][0]);
+}
+
+function showSheet(id) {
+  activeSheet = id;
+  document.querySelectorAll('.sheet').forEach(s => s.classList.add('hidden'));
+  document.getElementById('sheet_' + id).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn[data-sheet]').forEach(b => {
+    if (b.dataset.sheet === id) {
+      b.classList.add('active');
+      b.style.borderBottomColor = '#3b82f6';
+      b.style.color = '#1e293b';
+    } else {
+      b.classList.remove('active');
+      b.style.borderBottomColor = 'transparent';
+      b.style.color = '#94a3b8';
+    }
+  });
+  recalc(id);
+}
+
+function recalc(sheet) {
+  let totalH = 0;
+  let currentWeekH = 0;
+  const maxRows = studentCount[sheet] || TOTAL_STUDENT;
+  
+  for (let i = 1; i <= maxRows; i++) {
+    let rowH = 0;
+    const sels = document.querySelectorAll(`select[data-sheet="${sheet}"][data-row="${i}"]`);
+    sels.forEach(s => { if (s.value === 'H') rowH++; });
+    document.getElementById(`rowt_${sheet}_${i}`).textContent = rowH;
+    totalH += rowH;
+    
+    // Count current week only
+    const currentWeekSel = document.querySelector(`select[data-sheet="${sheet}"][data-row="${i}"][data-week="${currentWeek}"]`);
+    if (currentWeekSel && currentWeekSel.value === 'H') currentWeekH++;
+  }
+  
+  document.getElementById(`total_${sheet}`).textContent = currentWeekH;
+  const pct = (currentWeekH / maxRows) * 100;
+  document.getElementById(`pct_${sheet}`).textContent = pct.toFixed(1) + '%';
+  
+  // Update overall stats
+  updateOverallStats();
+  saveAll();
+}
+
+function updateOverallStats() {
+  let currentWeekAllTotal = 0;
+  let cumulativeAllTotal = 0;
+  let currentWeekAllCount = 0;
+  let cumulativeAllCount = 0;
+  
+  // Calculate all sheets (not units) - each sheet is unique
+  ALL_SHEETS.forEach(sheet => {
+    const sheetRows = studentCount[sheet] || TOTAL_STUDENT;
+    
+    // Current week total for this sheet
+    for (let i = 1; i <= sheetRows; i++) {
+      const currentWeekSel = document.querySelector(`select[data-sheet="${sheet}"][data-row="${i}"][data-week="${currentWeek}"]`);
+      if (currentWeekSel && currentWeekSel.value === 'H') currentWeekAllTotal++;
+      currentWeekAllCount++;
+    }
+    
+    // Cumulative total for this sheet
+    for (let i = 1; i <= sheetRows; i++) {
+      const sels = document.querySelectorAll(`select[data-sheet="${sheet}"][data-row="${i}"]`);
+      sels.forEach(s => { if (s.value === 'H') cumulativeAllTotal++; });
+    }
+    cumulativeAllCount += sheetRows * TOTAL_WEEK;
+  });
+  
+  document.getElementById('all_week_total').textContent = currentWeekAllTotal;
+  document.getElementById('all_cumulative_total').textContent = cumulativeAllTotal;
+  document.getElementById('current_week').textContent = 'M' + currentWeek;
+  
+  const grandAvg = (cumulativeAllTotal / cumulativeAllCount) * 100 || 0;
+  document.getElementById('overall_grand').textContent = grandAvg.toFixed(1) + '%';
+  
+  // Update tingkat stats for current week
+  updateTingkatStats();
+}
+
+function updateTingkatStats() {
+  const tingkatContainer = document.getElementById('tingkatStats');
+  tingkatContainer.innerHTML = '';
+  
+  const TINGKAT_LIST = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6R', 'T6A'];
+  
+  TINGKAT_LIST.forEach(tingkat => {
+    let totalHadir = 0;
+    let totalCount = 0;
+    
+    // Build sheet names for all units for this tingkat
+    const sheetNames = [
+      `P_${tingkat}`,
+      `B_${tingkat}`,
+      `S_${tingkat}`
+    ];
+    
+    // Count for this tingkat across ALL units in current week
+    sheetNames.forEach(sheet => {
+      const sheetRows = studentCount[sheet] || TOTAL_STUDENT;
+      for (let i = 1; i <= sheetRows; i++) {
+        const sel = document.querySelector(`select[data-sheet="${sheet}"][data-row="${i}"][data-week="${currentWeek}"]`);
+        if (sel) {
+          // Only count if there's actual data (H or T selected)
+          if (sel.value === 'H' || sel.value === 'T') {
+            totalCount++;
+            if (sel.value === 'H') totalHadir++;
+          }
+        }
+      }
+    });
+    
+    const stat = document.createElement('div');
+    stat.className = 'p-2 rounded text-center';
+    stat.style.background = '#ffffff';
+    stat.style.borderLeft = `3px solid #3b82f6`;
+    stat.innerHTML = `
+      <div style="color:#64748b;font-size:10px">${tingkat}</div>
+      <div style="color:#1e40af;font-weight:600;font-size:13px">${totalHadir}/${totalCount || 0}</div>
+    `;
+    tingkatContainer.appendChild(stat);
+  });
+}
+
+async function saveAll() {
+  const data = { selects: [], names: [], classes: [], schoolName: document.getElementById('schoolName').textContent };
+  document.querySelectorAll('select[data-sheet]').forEach(s => data.selects.push(s.value));
+  document.querySelectorAll('.name-cell').forEach(c => data.names.push(c.textContent));
+  document.querySelectorAll('.class-cell').forEach(c => data.classes.push(c.textContent));
+  try {
+    await sbFetch('/rest/v1/kokum2_school_data', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ kod_sekolah: K2_KOD, data: data, updated_at: new Date().toISOString() })
+    });
+  } catch (e) { console.error('Save error:', e); }
+}
+
+async function loadAll() {
+  try {
+    var res = await sbFetch('/rest/v1/kokum2_school_data?kod_sekolah=eq.'+encodeURIComponent(K2_KOD)+'&select=data', {method:'GET'});
+    var rows = await res.json();
+    const data = (rows && rows[0]) ? rows[0].data : {};
+    if (data.selects) document.querySelectorAll('select[data-sheet]').forEach((s, i) => { if (data.selects[i]) s.value = data.selects[i]; });
+    if (data.names) document.querySelectorAll('.name-cell').forEach((c, i) => { if (data.names[i]) c.textContent = data.names[i]; });
+    if (data.classes) document.querySelectorAll('.class-cell').forEach((c, i) => { if (data.classes[i]) c.textContent = data.classes[i]; });
+    if (data.schoolName) document.getElementById('schoolName').textContent = data.schoolName;
+  } catch(e) { console.error('Load error:', e); }
+}
+
+async function initAppData() {
+  await loadAll();
+  const savedBadge = localStorage.getItem('koko_badge');
+  if (savedBadge) {
+    window.elementSdk.setConfig({ school_badge: savedBadge });
+  }
+  showSheet('T1');
+  lucide.createIcons();
+}
+
+function updateSchoolName(name) {
+  saveAll();
+}
+
+function handleBadgeUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result;
+    window.elementSdk.setConfig({ school_badge: base64 });
+    localStorage.setItem('koko_badge', base64);
+  };
+  reader.readAsDataURL(file);
+}
+
+// Content editable save on blur
+document.addEventListener('blur', e => {
+  if (e.target.matches('[contenteditable]')) saveAll();
+}, true);
+
+function closeReset() { document.getElementById('resetOverlay').classList.add('hidden'); }
+async function confirmReset() {
+  await sbFetch('/rest/v1/kokum2_school_data?kod_sekolah=eq.'+encodeURIComponent(K2_KOD), {
+    method: 'PATCH', headers:{'Prefer':'return=minimal'},
+    body: JSON.stringify({ data: {} })
+  });
+  document.querySelectorAll('select[data-sheet]').forEach(s => s.value = '');
+  document.querySelectorAll('.name-cell, .class-cell').forEach(c => c.textContent = '');
+  ALL_SHEETS.forEach(s => recalc(s));
+  closeReset();
+  showToast('Semua rekod telah dipadam');
+}
+
+function changeWeek(week) {
+  currentWeek = parseInt(week);
+  recalc(activeSheet);
+}
+
+function addWeek() {
+  if (TOTAL_WEEK >= 52) {
+    showToast('Maksimum 52 minggu');
+    return;
+  }
+  
+  TOTAL_WEEK++;
+  
+  // Add new week option to selector
+  const ws = document.getElementById('weekSelector');
+  const opt = document.createElement('option');
+  opt.value = TOTAL_WEEK;
+  opt.textContent = 'Minggu ' + TOTAL_WEEK;
+  ws.appendChild(opt);
+  
+  // Add new column to the active sheet only
+  const table = document.querySelector(`#sheet_${activeSheet} table`);
+  if (table) {
+    const headerRow = table.querySelector('thead tr');
+    
+    // Add header for new week (insert before Σ column which is second to last)
+    const newTh = document.createElement('th');
+    newTh.className = 'px-1 py-2 font-semibold text-center';
+    newTh.style.color = '#64748b';
+    newTh.style.width = '45px';
+    newTh.textContent = 'M' + TOTAL_WEEK;
+    newTh.dataset.week = TOTAL_WEEK;
+    
+    // Insert before the last two th elements (Σ and delete button columns)
+    const ths = headerRow.querySelectorAll('th');
+    const insertBefore = ths[ths.length - 2];
+    headerRow.insertBefore(newTh, insertBefore);
+    
+    // Add cell for each row
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach((row, idx) => {
+      const rowNum = idx + 1;
+      const newTd = document.createElement('td');
+      newTd.className = 'px-1 py-1 text-center';
+      newTd.innerHTML = `<select data-sheet="${activeSheet}" data-row="${rowNum}" data-week="${TOTAL_WEEK}" onchange="recalc('${activeSheet}')"><option value=""></option><option value="H">H</option><option value="T">T</option></select>`;
+      
+      // Insert before the last two td elements (total and delete button)
+      const tds = row.querySelectorAll('td');
+      const insertBeforeTd = tds[tds.length - 2];
+      row.insertBefore(newTd, insertBeforeTd);
+    });
+  }
+  
+  recalc(activeSheet);
+  showToast('Minggu ' + TOTAL_WEEK + ' ditambah');
+}
+
+function deleteWeek() {
+  if (TOTAL_WEEK <= 1) {
+    showToast('Mesti ada sekurang-kurangnya 1 minggu');
+    return;
+  }
+  
+  const weekToDelete = TOTAL_WEEK;
+  TOTAL_WEEK--;
+  
+  // Remove week option from selector
+  const ws = document.getElementById('weekSelector');
+  const lastOption = ws.querySelector(`option[value="${weekToDelete}"]`);
+  if (lastOption) lastOption.remove();
+  
+  // Update selector value if needed
+  if (currentWeek > TOTAL_WEEK) {
+    currentWeek = TOTAL_WEEK;
+    ws.value = TOTAL_WEEK;
+  }
+  
+  // Remove column from all tables
+  ALL_SHEETS.forEach(sheet => {
+    const table = document.querySelector(`#sheet_${sheet} table`);
+    const headerRow = table.querySelector('thead tr');
+    const bodyRows = table.querySelectorAll('tbody tr');
+    
+    // Remove header for deleted week
+    const headers = headerRow.querySelectorAll('th');
+    if (headers.length > 3) {
+      headers[headers.length - 2].remove();
+    }
+    
+    // Remove cell for each row
+    bodyRows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length > 3) {
+        cells[cells.length - 2].remove();
+      }
+    });
+  });
+  
+  recalc(activeSheet);
+  showToast('Minggu ' + weekToDelete + ' telah dipadam');
+}
+
+function addStudent(sheet) {
+  const current = studentCount[sheet] || TOTAL_STUDENT;
+  if (current >= 50) {
+    showToast('Maksimum 50 pelajar');
+    return;
+  }
+  
+  const newNum = current + 1;
+  studentCount[sheet] = newNum;
+  
+  const table = document.querySelector(`#sheet_${sheet} table tbody`);
+  const newRow = document.createElement('tr');
+  const bg = newNum % 2 === 0 ? '#ffffff' : '#f8fafc';
+  newRow.style.background = bg;
+  
+  let rowHTML = `<td class="px-2 py-1.5 font-medium text-center sticky left-0 z-10" style="background:${bg};color:#94a3b8">${newNum}</td>`;
+  rowHTML += `<td contenteditable="true" class="name-cell" data-sheet="${sheet}" data-row="${newNum}" style="color:#1e293b;min-width:80px"></td>`;
+  rowHTML += `<td contenteditable="true" class="class-cell" data-sheet="${sheet}" data-row="${newNum}" style="color:#1e293b;min-width:50px"></td>`;
+  
+  for (let w = 1; w <= TOTAL_WEEK; w++) {
+    rowHTML += `<td class="px-1 py-1 text-center"><select data-sheet="${sheet}" data-row="${newNum}" data-week="${w}" onchange="recalc('${sheet}')"><option value=""></option><option value="H">H</option><option value="T">T</option></select></td>`;
+  }
+  
+  rowHTML += `<td class="px-2 py-1.5 text-center font-bold" id="rowt_${sheet}_${newNum}" style="color:#1e40af">0</td>`;
+  rowHTML += `<td class="px-2 py-1.5 text-center"><button onclick="showDeleteConfirm('${sheet}', ${newNum})" class="delete-btn" style="border:none;background:none;padding:2px;cursor:pointer;opacity:0.5;transition:opacity .15s;color:#94a3b8" onmouseover="this.style.opacity='1';this.style.color='#ef4444'" onmouseout="this.style.opacity='0.5';this.style.color='#94a3b8'"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></td>`;
+  newRow.innerHTML = rowHTML;
+  table.appendChild(newRow);
+  
+  lucide.createIcons();
+  recalc(sheet);
+  showToast('Pelajar baru ditambah');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.remove('translate-y-20','opacity-0');
+  setTimeout(() => t.classList.add('translate-y-20','opacity-0'), 2500);
+}
+
+let deleteConfirmState = null;
+
+function showDeleteConfirm(sheet, row) {
+  deleteConfirmState = { sheet, row };
+  const overlay = document.getElementById('resetOverlay');
+  overlay.innerHTML = `
+    <div class="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center"><i data-lucide="alert-triangle" style="width:20px;height:20px;color:#ef4444"></i></div>
+        <h3 class="font-semibold text-gray-900 text-lg">Padam Pelajar?</h3>
+      </div>
+      <p class="text-gray-600 text-sm mb-5">Tindakan ini akan memadam pelajar ini dan rekod kehadirannya.</p>
+      <div class="flex gap-2 justify-end">
+        <button onclick="closeDeleteConfirm()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition">Batal</button>
+        <button onclick="confirmDeleteStudent()" class="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition">Ya, Padam</button>
+      </div>
+    </div>
+  `;
+  overlay.classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function closeDeleteConfirm() {
+  deleteConfirmState = null;
+  const overlay = document.getElementById('resetOverlay');
+  overlay.innerHTML = `
+    <div class="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center"><i data-lucide="alert-triangle" style="width:20px;height:20px;color:#ef4444"></i></div>
+        <h3 class="font-semibold text-gray-900 text-lg">Padam Semua Rekod?</h3>
+      </div>
+      <p class="text-gray-600 text-sm mb-5">Tindakan ini akan memadam semua data kehadiran dan tidak boleh dibatalkan.</p>
+      <div class="flex gap-2 justify-end"><button onclick="closeReset()" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition">Batal</button> <button onclick="confirmReset()" class="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition">Ya, Padam</button></div>
+    </div>
+  `;
+  overlay.classList.add('hidden');
+}
+
+function confirmDeleteStudent() {
+  if (!deleteConfirmState) return;
+  const { sheet, row } = deleteConfirmState;
+  
+  // Clear the row data
+  const nameCell = document.querySelector(`.name-cell[data-sheet="${sheet}"][data-row="${row}"]`);
+  const classCell = document.querySelector(`.class-cell[data-sheet="${sheet}"][data-row="${row}"]`);
+  if (nameCell) nameCell.textContent = '';
+  if (classCell) classCell.textContent = '';
+  
+  // Clear attendance data
+  const selects = document.querySelectorAll(`select[data-sheet="${sheet}"][data-row="${row}"]`);
+  selects.forEach(s => s.value = '');
+  
+  closeDeleteConfirm();
+  recalc(sheet);
+  showToast('Pelajar telah dipadam');
+}
+
+// Element SDK
+function applyConfig(config) {
+  const bg = config.background_color || defaultConfig.background_color;
+  const surface = config.surface_color || defaultConfig.surface_color;
+  const txt = config.text_color || defaultConfig.text_color;
+  const primary = config.primary_action || defaultConfig.primary_action;
+  const secondary = config.secondary_action || defaultConfig.secondary_action;
+  const font = config.font_family || defaultConfig.font_family;
+  const fs = config.font_size || defaultConfig.font_size;
+
+  document.getElementById('app').style.background = bg;
+  document.getElementById('mainTitle').textContent = config.main_title || defaultConfig.main_title;
+  document.getElementById('mainTitle').style.color = txt;
+  document.getElementById('mainTitle').style.fontFamily = `${font}, sans-serif`;
+  document.getElementById('mainTitle').style.fontSize = `${fs * 1.5}px`;
+  
+  // Update school name
+  document.getElementById('schoolName').textContent = config.school_name || 'Sekolah';
+  document.getElementById('schoolName').style.fontFamily = `${font}, sans-serif`;
+  
+  // Update school badge
+  const badgeContainer = document.getElementById('schoolBadgeContainer');
+  if (config.school_badge && config.school_badge.trim()) {
+    badgeContainer.innerHTML = `<img src="${config.school_badge}" alt="Logo sekolah" style="width:100%;height:100%;object-fit:contain;border-radius:4px" loading="lazy" onerror="console.error('Badge failed:', this.src); this.style.display='none'; document.querySelector('#schoolBadgeContainer i')?.parentElement.classList.remove('hidden')">`;
+    // Keep the default icon as fallback
+    const defaultIcon = document.createElement('i');
+    defaultIcon.setAttribute('data-lucide', 'clipboard-check');
+    defaultIcon.style.width = '24px';
+    defaultIcon.style.height = '24px';
+    defaultIcon.style.color = 'white';
+    defaultIcon.className = 'hidden';
+    badgeContainer.appendChild(defaultIcon);
+    lucide.createIcons();
+  } else {
+    badgeContainer.innerHTML = '<i data-lucide="clipboard-check" style="width:24px;height:24px;color:white"></i>';
+    lucide.createIcons();
+  }
+
+  document.querySelectorAll('thead tr').forEach(r => r.style.background = surface);
+  document.querySelectorAll('th').forEach(th => th.style.color = secondary);
+  document.querySelectorAll('.overflow-x-auto').forEach(d => d.style.background = surface);
+  document.querySelectorAll('tbody tr').forEach((r, i) => r.style.background = i % 2 === 0 ? surface : bg);
+  document.querySelectorAll('td[contenteditable]').forEach(c => c.style.color = txt);
+  document.querySelectorAll('td:first-child').forEach(c => c.style.color = secondary);
+
+  ALL_SHEETS.forEach(s => {
+    const te = document.getElementById(`total_${s}`);
+    const pe = document.getElementById(`pct_${s}`);
+    if (te) te.style.color = primary;
+    if (pe) pe.style.color = primary;
+    for (let i = 1; i <= TOTAL_STUDENT; i++) {
+      const rt = document.getElementById(`rowt_${s}_${i}`);
+      if (rt) rt.style.color = primary;
+    }
+  });
+
+  // Update overall stats colors
+  document.getElementById('all_week_total').style.color = primary;
+  document.getElementById('all_cumulative_total').style.color = primary;
+  document.getElementById('overall_grand').style.color = primary;
+
+  document.querySelectorAll('td[contenteditable]').forEach(c => {
+    c.style.color = txt;
+    c.style.borderLeft = `2px solid ${primary}40`;
+  });
+
+  document.querySelectorAll('select').forEach(s => {
+    s.style.borderColor = secondary;
+    s.style.background = surface;
+    s.style.color = txt;
+  });
+
+  document.querySelectorAll('.tab-btn[data-sheet]').forEach(b => {
+    if (b.dataset.sheet === activeSheet) { 
+      b.style.background = surface; 
+      b.style.color = txt; 
+      b.style.borderBottomColor = primary;
+    }
+    else { 
+      b.style.background = 'transparent'; 
+      b.style.color = secondary; 
+    }
+  });
+
+  // Update unit buttons color
+  document.getElementById('btn-PERSATUAN').style.color = activeUnit === 'PERSATUAN' ? 'white' : '#64748b';
+  document.getElementById('btn-BERUNIFORM').style.color = activeUnit === 'BERUNIFORM' ? 'white' : '#64748b';
+  document.getElementById('btn-SUKAN').style.color = activeUnit === 'SUKAN' ? 'white' : '#64748b';
+  
+  // Update add student button colors
+  document.querySelectorAll('button[onclick*="addStudent"]').forEach(b => {
+    b.style.background = primary;
+  });
+}
+
+window.elementSdk.init({
+  defaultConfig,
+  onConfigChange: async (config) => applyConfig(config),
+  mapToCapabilities: (config) => ({
+    recolorables: [
+      { get: () => config.background_color || defaultConfig.background_color, set: v => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+      { get: () => config.surface_color || defaultConfig.surface_color, set: v => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
+      { get: () => config.text_color || defaultConfig.text_color, set: v => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+      { get: () => config.primary_action || defaultConfig.primary_action, set: v => { config.primary_action = v; window.elementSdk.setConfig({ primary_action: v }); } },
+      { get: () => config.secondary_action || defaultConfig.secondary_action, set: v => { config.secondary_action = v; window.elementSdk.setConfig({ secondary_action: v }); } }
+    ],
+    borderables: [],
+    fontEditable: { get: () => config.font_family || defaultConfig.font_family, set: v => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); } },
+    fontSizeable: { get: () => config.font_size || defaultConfig.font_size, set: v => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); } }
+  }),
+  mapToEditPanelValues: (config) => new Map([
+    ['school_name', config.school_name || 'Sekolah'],
+    ['school_badge', config.school_badge || ''],
+    ['main_title', config.main_title || defaultConfig.main_title]
+  ])
+});
+
+tryResumeSession();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e82414596e846c4',t:'MTc3NTQ5Mzg0My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<style>
+.pwd-wrap{position:relative;display:inline-block;width:100%}
+.pwd-wrap input[type=password]{padding-right:36px !important;width:100%;box-sizing:border-box}
+.pwd-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:17px;user-select:none;opacity:.55;line-height:1}
+.pwd-eye:hover{opacity:1}
+</style>
+<script>
+(function(){
+  function wrapPwd(inp){
+    if(inp.dataset.pwdWrapped) return;
+    inp.dataset.pwdWrapped='1';
+    var wrap=document.createElement('span');
+    wrap.className='pwd-wrap';
+    inp.parentNode.insertBefore(wrap, inp);
+    wrap.appendChild(inp);
+    var eye=document.createElement('span');
+    eye.className='pwd-eye';
+    eye.innerHTML='\u{1F441}\uFE0F';
+    eye.onclick=function(){
+      if(inp.type==='password'){inp.type='text';eye.style.opacity='1';}
+      else{inp.type='password';eye.style.opacity='.55';}
+    };
+    wrap.appendChild(eye);
+  }
+  function scan(){
+    document.querySelectorAll('input[type=password]').forEach(wrapPwd);
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', scan);
+  } else { scan(); }
+  new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
+
+</body>
+</html>
