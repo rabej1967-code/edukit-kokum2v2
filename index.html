@@ -423,9 +423,15 @@ function recalc(sheet) {
   const pct = (currentWeekH / maxRows) * 100;
   document.getElementById(`pct_${sheet}`).textContent = pct.toFixed(1) + '%';
   
-  // Update overall stats
-  updateOverallStats();
+  // Update overall stats (berat - buat secara "lazy"/debounced supaya klik tak lag)
+  scheduleGlobalStatsUpdate();
   saveAll();
+}
+
+var _statsDebounceTimer = null;
+function scheduleGlobalStatsUpdate(){
+  if (_statsDebounceTimer) clearTimeout(_statsDebounceTimer);
+  _statsDebounceTimer = setTimeout(updateOverallStats, 350);
 }
 
 function updateOverallStats() {
