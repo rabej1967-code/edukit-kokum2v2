@@ -6,7 +6,13 @@
   <title>Rekod Kehadiran Kokurikulum</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
-  <script src="/_sdk/element_sdk.js"></script>
+  <script>
+    // Stub untuk elementSdk (fail asal /_sdk/element_sdk.js tak wujud di GitHub Pages - ini cuma untuk tema visual, tiada kesan pada fungsi app)
+    window.elementSdk = window.elementSdk || {
+      init: function(){},
+      setConfig: function(){},
+    };
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <style>
 html,body{height:100%;margin:0}
