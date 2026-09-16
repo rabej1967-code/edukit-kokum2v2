@@ -508,7 +508,14 @@ function updateTingkatStats() {
   });
 }
 
-async function saveAll() {
+var _saveDebounceTimer = null;
+function saveAll() {
+  // Debounce: tunggu 700ms lepas klik terakhir sebelum betul-betul hantar ke server
+  if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
+  _saveDebounceTimer = setTimeout(doSaveNow, 700);
+}
+
+async function doSaveNow() {
   const data = { selects: [], names: [], classes: [], schoolName: document.getElementById('schoolName').textContent };
   document.querySelectorAll('select[data-sheet]').forEach(s => data.selects.push(s.value));
   document.querySelectorAll('.name-cell').forEach(c => data.names.push(c.textContent));
