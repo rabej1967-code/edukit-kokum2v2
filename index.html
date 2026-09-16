@@ -275,6 +275,12 @@ let activeUnit = 'PERSATUAN';
 let activeSheet = 'T1';
 let studentCount = {};
 
+// ── Sumber data utama (dalam memori) — bukan DOM ──
+let AD = {}; // attendance: AD[sheet][row][week] = 'H' | 'T'
+let ND = {}; // names: ND[sheet][row] = 'nama'
+let CD = {}; // classes: CD[sheet][row] = 'kelas'
+let builtSheets = new Set();
+
 const defaultConfig = {
   main_title: 'Sistem Rekod Kehadiran Kokurikulum',
   background_color: '#f8fafc',
@@ -312,6 +318,10 @@ function buildTabs() {
 
 // Build sheet HTML
 function buildSheet(id) {
+  const rows = studentCount[id] || TOTAL_STUDENT;
+  const rowData = AD[id] || {};
+  const nameData = ND[id] || {};
+  const classData = CD[id] || {};
   let h = `<div class="sheet hidden" id="sheet_${id}">`;
   h += `<div class="grid grid-cols-2 gap-2 sm:gap-4 mb-4"><div class="flex items-center gap-2 text-xs sm:text-sm p-3 rounded-lg" style="background:#f0f4f8"><i data-lucide="users" style="width:15px;height:15px;color:#64748b"></i><div><div style="color:#64748b;font-size:11px">Hadir (Minggu Semasa)</div><div><strong id="total_${id}" style="color:#1e40af;font-size:16px">0</strong></div></div></div>`;
   h += `<div class="flex items-center gap-2 text-xs sm:text-sm p-3 rounded-lg" style="background:#f0f4f8"><i data-lucide="percent" style="width:15px;height:15px;color:#64748b"></i><div><div style="color:#64748b;font-size:11px">Peratus</div><div><strong id="pct_${id}" style="color:#1e40af;font-size:16px">0.0%</strong></div></div></div></div>`;
@@ -320,19 +330,26 @@ function buildSheet(id) {
   h += `<th class="px-2 py-2 text-left font-semibold sticky left-0 z-10" style="background:#f1f5f9;color:#64748b;width:35px">Bil</th>`;
   h += `<th class="px-2 py-2 text-left font-semibold" style="color:#64748b;min-width:100px">Nama</th>`;
   h += `<th class="px-2 py-2 text-left font-semibold" style="color:#64748b;min-width:60px">Kelas</th>`;
-  for (let w = 1; w <= TOTAL_WEEK; w++) h += `<th class="px-1 py-2 font-semibold text-center" style="color:#64748b;width:45px">M${w}</th>`;
+  for (let w = 1; w <= TOTAL_WEEK; w++) h += `<th class="px-1 py-2 font-semibold text-center" style="color:#64748b;width:45px" data-week="${w}">M${w}</th>`;
   h += `<th class="px-2 py-2 font-semibold text-center" style="color:#64748b;width:50px">Σ</th>`;
   h += `<th class="px-2 py-2 font-semibold text-center" style="color:#64748b;width:40px"></th></tr></thead><tbody>`;
-  for (let i = 1; i <= TOTAL_STUDENT; i++) {
+  for (let i = 1; i <= rows; i++) {
     const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+    const nm = nameData[i] || '';
+    const cls = classData[i] || '';
+    const rd = rowData[i] || {};
+    let rowH = 0;
     h += `<tr style="background:${bg}">`;
     h += `<td class="px-2 py-1.5 font-medium text-center sticky left-0 z-10" style="background:${bg};color:#94a3b8">${i}</td>`;
-    h += `<td contenteditable="true" class="name-cell" data-sheet="${id}" data-row="${i}" style="color:#1e293b;min-width:80px"></td>`;
-    h += `<td contenteditable="true" class="class-cell" data-sheet="${id}" data-row="${i}" style="color:#1e293b;min-width:50px"></td>`;
+    h += `<td contenteditable="true" class="name-cell" data-sheet="${id}" data-row="${i}" style="color:#1e293b;min-width:80px">${nm}</td>`;
+    h += `<td contenteditable="true" class="class-cell" data-sheet="${id}" data-row="${i}" style="color:#1e293b;min-width:50px">${cls}</td>`;
     for (let w = 1; w <= TOTAL_WEEK; w++) {
-      h += `<td class="px-1 py-1 text-center"><select data-sheet="${id}" data-row="${i}" data-week="${w}" onchange="recalc('${id}')"><option value=""></option><option value="H">H</option><option value="T">T</option></select></td>`;
+      const v = rd[w] || '';
+      if (v === 'H') rowH++;
+      h += `<td class="px-1 py-1 text-center"><select data-sheet="${id}" data-row="${i}" data-week="${w}">`;
+      h += `<option value=""${v===''?' selected':''}></option><option value="H"${v==='H'?' selected':''}>H</option><option value="T"${v==='T'?' selected':''}>T</option></select></td>`;
     }
-    h += `<td class="px-2 py-1.5 text-center font-bold" id="rowt_${id}_${i}" style="color:#1e40af">0</td>`;
+    h += `<td class="px-2 py-1.5 text-center font-bold" id="rowt_${id}_${i}" style="color:#1e40af">${rowH}</td>`;
     h += `<td class="px-2 py-1.5 text-center"><button onclick="showDeleteConfirm('${id}', ${i})" class="delete-btn" style="border:none;background:none;padding:2px;cursor:pointer;opacity:0.5;transition:opacity .15s;color:#94a3b8" onmouseover="this.style.opacity='1';this.style.color='#ef4444'" onmouseout="this.style.opacity='0.5';this.style.color='#94a3b8'"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></td>`;
     h += `</tr>`;
   }
@@ -345,24 +362,66 @@ function buildSheet(id) {
   return h;
 }
 
-// Init sheets
-let selCache = {};
-function rebuildSelCache(){
-  const cache = {};
-  document.querySelectorAll('select[data-sheet]').forEach(sel => {
-    const sheet = sel.dataset.sheet, row = sel.dataset.row, week = sel.dataset.week;
-    if (!cache[sheet]) cache[sheet] = {};
-    if (!cache[sheet][row]) cache[sheet][row] = {};
-    cache[sheet][row][week] = sel;
-  });
-  return cache;
-}
-(function(){
+// Bina helaian hanya bila diperlukan ("lazy") - elak bina 21 helaian x 40 baris serentak
+function ensureSheetBuilt(id) {
+  if (builtSheets.has(id)) return;
   const c = document.getElementById('sheetContainer');
-  c.innerHTML = ALL_SHEETS.map(buildSheet).join('');
-  selCache = rebuildSelCache();
-  
-  // Init week selector
+  c.insertAdjacentHTML('beforeend', buildSheet(id));
+  builtSheets.add(id);
+  lucide.createIcons();
+}
+
+// Bina semula helaian yang pernah dilawati (dipanggil bila struktur berubah: tambah/buang minggu)
+function rebuildBuiltSheets() {
+  const toRebuild = Array.from(builtSheets);
+  toRebuild.forEach(sheet => {
+    const old = document.getElementById('sheet_' + sheet);
+    if (old) old.remove();
+    builtSheets.delete(sheet);
+  });
+  ensureSheetBuilt(activeSheet);
+  document.getElementById('sheet_' + activeSheet).classList.remove('hidden');
+  lucide.createIcons();
+}
+
+// Bina semula SATU helaian sahaja (lepas tambah/buang pelajar)
+function rebuildOneSheet(sheet) {
+  const wasVisible = sheet === activeSheet;
+  const old = document.getElementById('sheet_' + sheet);
+  if (old) old.remove();
+  builtSheets.delete(sheet);
+  ensureSheetBuilt(sheet);
+  if (wasVisible) document.getElementById('sheet_' + sheet).classList.remove('hidden');
+}
+
+// Event delegation - SATU listener untuk semua select kehadiran (bukan onchange berasingan x 8400)
+document.addEventListener('change', function(e){
+  if (!e.target.matches('select[data-week]')) return;
+  const sel = e.target;
+  const sheet = sel.dataset.sheet, row = sel.dataset.row, week = sel.dataset.week;
+  if (!AD[sheet]) AD[sheet] = {};
+  if (!AD[sheet][row]) AD[sheet][row] = {};
+  AD[sheet][row][week] = sel.value;
+  recalc(sheet);
+});
+
+// Event delegation untuk nama/kelas (contenteditable, on blur)
+document.addEventListener('blur', function(e){
+  if (e.target.matches('.name-cell')) {
+    const sheet = e.target.dataset.sheet, row = e.target.dataset.row;
+    if (!ND[sheet]) ND[sheet] = {};
+    ND[sheet][row] = e.target.textContent;
+    saveAll();
+  } else if (e.target.matches('.class-cell')) {
+    const sheet = e.target.dataset.sheet, row = e.target.dataset.row;
+    if (!CD[sheet]) CD[sheet] = {};
+    CD[sheet][row] = e.target.textContent;
+    saveAll();
+  }
+}, true);
+
+// Init (ringan - tak bina helaian upfront)
+(function(){
   const ws = document.getElementById('weekSelector');
   for (let w = 1; w <= TOTAL_WEEK; w++) {
     const opt = document.createElement('option');
@@ -372,7 +431,6 @@ function rebuildSelCache(){
   }
   ws.value = 1;
   
-  // Init student count
   ALL_SHEETS.forEach(s => { studentCount[s] = TOTAL_STUDENT; });
   
   buildTabs();
@@ -396,6 +454,7 @@ function switchUnit(unit) {
 }
 
 function showSheet(id) {
+  ensureSheetBuilt(id);
   activeSheet = id;
   document.querySelectorAll('.sheet').forEach(s => s.classList.add('hidden'));
   document.getElementById('sheet_' + id).classList.remove('hidden');
@@ -414,30 +473,26 @@ function showSheet(id) {
 }
 
 function recalc(sheet) {
-  let totalH = 0;
   let currentWeekH = 0;
   const maxRows = studentCount[sheet] || TOTAL_STUDENT;
-  const sheetCache = selCache[sheet] || {};
+  const sheetData = AD[sheet] || {};
   
   for (let i = 1; i <= maxRows; i++) {
+    const rowData = sheetData[i] || {};
     let rowH = 0;
-    const rowCache = sheetCache[i] || {};
     for (let w = 1; w <= TOTAL_WEEK; w++) {
-      const sel = rowCache[w];
-      if (sel && sel.value === 'H') rowH++;
+      if (rowData[w] === 'H') rowH++;
     }
     const rowEl = document.getElementById(`rowt_${sheet}_${i}`);
     if (rowEl) rowEl.textContent = rowH;
-    totalH += rowH;
-    
-    // Count current week only
-    const currentWeekSel = rowCache[currentWeek];
-    if (currentWeekSel && currentWeekSel.value === 'H') currentWeekH++;
+    if (rowData[currentWeek] === 'H') currentWeekH++;
   }
   
-  document.getElementById(`total_${sheet}`).textContent = currentWeekH;
+  const totalEl = document.getElementById(`total_${sheet}`);
+  if (totalEl) totalEl.textContent = currentWeekH;
   const pct = (currentWeekH / maxRows) * 100;
-  document.getElementById(`pct_${sheet}`).textContent = pct.toFixed(1) + '%';
+  const pctEl = document.getElementById(`pct_${sheet}`);
+  if (pctEl) pctEl.textContent = pct.toFixed(1) + '%';
   
   // Update overall stats (berat - buat secara "lazy"/debounced supaya klik tak lag)
   scheduleGlobalStatsUpdate();
@@ -447,7 +502,7 @@ function recalc(sheet) {
 var _statsDebounceTimer = null;
 function scheduleGlobalStatsUpdate(){
   if (_statsDebounceTimer) clearTimeout(_statsDebounceTimer);
-  _statsDebounceTimer = setTimeout(updateOverallStats, 350);
+  _statsDebounceTimer = setTimeout(updateOverallStats, 250);
 }
 
 function updateOverallStats() {
@@ -456,21 +511,16 @@ function updateOverallStats() {
   let currentWeekAllCount = 0;
   let cumulativeAllCount = 0;
   
-  // Calculate all sheets (not units) - each sheet is unique
   ALL_SHEETS.forEach(sheet => {
     const sheetRows = studentCount[sheet] || TOTAL_STUDENT;
-    const sheetCache = selCache[sheet] || {};
+    const sheetData = AD[sheet] || {};
     
     for (let i = 1; i <= sheetRows; i++) {
-      const rowCache = sheetCache[i] || {};
-      // Current week
-      const cw = rowCache[currentWeek];
-      if (cw && cw.value === 'H') currentWeekAllTotal++;
+      const rowData = sheetData[i] || {};
+      if (rowData[currentWeek] === 'H') currentWeekAllTotal++;
       currentWeekAllCount++;
-      // Cumulative
       for (let w = 1; w <= TOTAL_WEEK; w++) {
-        const sel = rowCache[w];
-        if (sel && sel.value === 'H') cumulativeAllTotal++;
+        if (rowData[w] === 'H') cumulativeAllTotal++;
       }
     }
     cumulativeAllCount += sheetRows * TOTAL_WEEK;
@@ -483,7 +533,6 @@ function updateOverallStats() {
   const grandAvg = (cumulativeAllTotal / cumulativeAllCount) * 100 || 0;
   document.getElementById('overall_grand').textContent = grandAvg.toFixed(1) + '%';
   
-  // Update tingkat stats for current week
   updateTingkatStats();
 }
 
@@ -507,16 +556,13 @@ function updateTingkatStats() {
     // Count for this tingkat across ALL units in current week
     sheetNames.forEach(sheet => {
       const sheetRows = studentCount[sheet] || TOTAL_STUDENT;
-      const sheetCache = selCache[sheet] || {};
+      const sheetData = AD[sheet] || {};
       for (let i = 1; i <= sheetRows; i++) {
-        const rowCache = sheetCache[i] || {};
-        const sel = rowCache[currentWeek];
-        if (sel) {
-          // Only count if there's actual data (H or T selected)
-          if (sel.value === 'H' || sel.value === 'T') {
-            totalCount++;
-            if (sel.value === 'H') totalHadir++;
-          }
+        const rowData = sheetData[i] || {};
+        const v = rowData[currentWeek];
+        if (v === 'H' || v === 'T') {
+          totalCount++;
+          if (v === 'H') totalHadir++;
         }
       }
     });
@@ -541,10 +587,10 @@ function saveAll() {
 }
 
 async function doSaveNow() {
-  const data = { selects: [], names: [], classes: [], schoolName: document.getElementById('schoolName').textContent };
-  document.querySelectorAll('select[data-sheet]').forEach(s => data.selects.push(s.value));
-  document.querySelectorAll('.name-cell').forEach(c => data.names.push(c.textContent));
-  document.querySelectorAll('.class-cell').forEach(c => data.classes.push(c.textContent));
+  const data = {
+    schoolName: document.getElementById('schoolName').textContent,
+    AD, ND, CD, studentCount, TOTAL_WEEK
+  };
   try {
     await sbFetch('/rest/v1/kokum2_school_data', {
       method: 'POST',
@@ -559,9 +605,11 @@ async function loadAll() {
     var res = await sbFetch('/rest/v1/kokum2_school_data?kod_sekolah=eq.'+encodeURIComponent(K2_KOD)+'&select=data', {method:'GET'});
     var rows = await res.json();
     const data = (rows && rows[0]) ? rows[0].data : {};
-    if (data.selects) document.querySelectorAll('select[data-sheet]').forEach((s, i) => { if (data.selects[i]) s.value = data.selects[i]; });
-    if (data.names) document.querySelectorAll('.name-cell').forEach((c, i) => { if (data.names[i]) c.textContent = data.names[i]; });
-    if (data.classes) document.querySelectorAll('.class-cell').forEach((c, i) => { if (data.classes[i]) c.textContent = data.classes[i]; });
+    AD = data.AD || {};
+    ND = data.ND || {};
+    CD = data.CD || {};
+    if (data.studentCount) studentCount = data.studentCount;
+    if (data.TOTAL_WEEK) TOTAL_WEEK = data.TOTAL_WEEK;
     if (data.schoolName) document.getElementById('schoolName').textContent = data.schoolName;
   } catch(e) { console.error('Load error:', e); }
 }
@@ -593,20 +641,18 @@ function handleBadgeUpload(event) {
   reader.readAsDataURL(file);
 }
 
-// Content editable save on blur
-document.addEventListener('blur', e => {
-  if (e.target.matches('[contenteditable]')) saveAll();
-}, true);
-
 function closeReset() { document.getElementById('resetOverlay').classList.add('hidden'); }
 async function confirmReset() {
   await sbFetch('/rest/v1/kokum2_school_data?kod_sekolah=eq.'+encodeURIComponent(K2_KOD), {
     method: 'PATCH', headers:{'Prefer':'return=minimal'},
     body: JSON.stringify({ data: {} })
   });
-  document.querySelectorAll('select[data-sheet]').forEach(s => s.value = '');
-  document.querySelectorAll('.name-cell, .class-cell').forEach(c => c.textContent = '');
-  ALL_SHEETS.forEach(s => recalc(s));
+  AD = {}; ND = {}; CD = {};
+  ALL_SHEETS.forEach(s => { studentCount[s] = TOTAL_STUDENT; });
+  document.getElementById('sheetContainer').innerHTML = '';
+  builtSheets.clear();
+  ensureSheetBuilt(activeSheet);
+  showSheet(activeSheet);
   closeReset();
   showToast('Semua rekod telah dipadam');
 }
@@ -621,50 +667,15 @@ function addWeek() {
     showToast('Maksimum 52 minggu');
     return;
   }
-  
   TOTAL_WEEK++;
-  
-  // Add new week option to selector
   const ws = document.getElementById('weekSelector');
   const opt = document.createElement('option');
   opt.value = TOTAL_WEEK;
   opt.textContent = 'Minggu ' + TOTAL_WEEK;
   ws.appendChild(opt);
-  
-  // Add new column to the active sheet only
-  const table = document.querySelector(`#sheet_${activeSheet} table`);
-  if (table) {
-    const headerRow = table.querySelector('thead tr');
-    
-    // Add header for new week (insert before Σ column which is second to last)
-    const newTh = document.createElement('th');
-    newTh.className = 'px-1 py-2 font-semibold text-center';
-    newTh.style.color = '#64748b';
-    newTh.style.width = '45px';
-    newTh.textContent = 'M' + TOTAL_WEEK;
-    newTh.dataset.week = TOTAL_WEEK;
-    
-    // Insert before the last two th elements (Σ and delete button columns)
-    const ths = headerRow.querySelectorAll('th');
-    const insertBefore = ths[ths.length - 2];
-    headerRow.insertBefore(newTh, insertBefore);
-    
-    // Add cell for each row
-    const bodyRows = table.querySelectorAll('tbody tr');
-    bodyRows.forEach((row, idx) => {
-      const rowNum = idx + 1;
-      const newTd = document.createElement('td');
-      newTd.className = 'px-1 py-1 text-center';
-      newTd.innerHTML = `<select data-sheet="${activeSheet}" data-row="${rowNum}" data-week="${TOTAL_WEEK}" onchange="recalc('${activeSheet}')"><option value=""></option><option value="H">H</option><option value="T">T</option></select>`;
-      
-      // Insert before the last two td elements (total and delete button)
-      const tds = row.querySelectorAll('td');
-      const insertBeforeTd = tds[tds.length - 2];
-      row.insertBefore(newTd, insertBeforeTd);
-    });
-  }
-  
+  rebuildBuiltSheets();
   recalc(activeSheet);
+  saveAll();
   showToast('Minggu ' + TOTAL_WEEK + ' ditambah');
 }
 
@@ -673,43 +684,26 @@ function deleteWeek() {
     showToast('Mesti ada sekurang-kurangnya 1 minggu');
     return;
   }
-  
   const weekToDelete = TOTAL_WEEK;
   TOTAL_WEEK--;
   
-  // Remove week option from selector
   const ws = document.getElementById('weekSelector');
   const lastOption = ws.querySelector(`option[value="${weekToDelete}"]`);
   if (lastOption) lastOption.remove();
   
-  // Update selector value if needed
   if (currentWeek > TOTAL_WEEK) {
     currentWeek = TOTAL_WEEK;
     ws.value = TOTAL_WEEK;
   }
   
-  // Remove column from all tables
-  ALL_SHEETS.forEach(sheet => {
-    const table = document.querySelector(`#sheet_${sheet} table`);
-    const headerRow = table.querySelector('thead tr');
-    const bodyRows = table.querySelectorAll('tbody tr');
-    
-    // Remove header for deleted week
-    const headers = headerRow.querySelectorAll('th');
-    if (headers.length > 3) {
-      headers[headers.length - 2].remove();
-    }
-    
-    // Remove cell for each row
-    bodyRows.forEach(row => {
-      const cells = row.querySelectorAll('td');
-      if (cells.length > 3) {
-        cells[cells.length - 2].remove();
-      }
-    });
+  // Buang data minggu yang dipadam dari memori
+  Object.keys(AD).forEach(sheet => {
+    Object.keys(AD[sheet]).forEach(row => { delete AD[sheet][row][weekToDelete]; });
   });
   
+  rebuildBuiltSheets();
   recalc(activeSheet);
+  saveAll();
   showToast('Minggu ' + weekToDelete + ' telah dipadam');
 }
 
@@ -722,34 +716,9 @@ function addStudent(sheet) {
   
   const newNum = current + 1;
   studentCount[sheet] = newNum;
-  
-  const table = document.querySelector(`#sheet_${sheet} table tbody`);
-  const newRow = document.createElement('tr');
-  const bg = newNum % 2 === 0 ? '#ffffff' : '#f8fafc';
-  newRow.style.background = bg;
-  
-  let rowHTML = `<td class="px-2 py-1.5 font-medium text-center sticky left-0 z-10" style="background:${bg};color:#94a3b8">${newNum}</td>`;
-  rowHTML += `<td contenteditable="true" class="name-cell" data-sheet="${sheet}" data-row="${newNum}" style="color:#1e293b;min-width:80px"></td>`;
-  rowHTML += `<td contenteditable="true" class="class-cell" data-sheet="${sheet}" data-row="${newNum}" style="color:#1e293b;min-width:50px"></td>`;
-  
-  for (let w = 1; w <= TOTAL_WEEK; w++) {
-    rowHTML += `<td class="px-1 py-1 text-center"><select data-sheet="${sheet}" data-row="${newNum}" data-week="${w}" onchange="recalc('${sheet}')"><option value=""></option><option value="H">H</option><option value="T">T</option></select></td>`;
-  }
-  
-  rowHTML += `<td class="px-2 py-1.5 text-center font-bold" id="rowt_${sheet}_${newNum}" style="color:#1e40af">0</td>`;
-  rowHTML += `<td class="px-2 py-1.5 text-center"><button onclick="showDeleteConfirm('${sheet}', ${newNum})" class="delete-btn" style="border:none;background:none;padding:2px;cursor:pointer;opacity:0.5;transition:opacity .15s;color:#94a3b8" onmouseover="this.style.opacity='1';this.style.color='#ef4444'" onmouseout="this.style.opacity='0.5';this.style.color='#94a3b8'"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button></td>`;
-  newRow.innerHTML = rowHTML;
-  table.appendChild(newRow);
-  
-  // Daftar select baru dalam cache
-  if (!selCache[sheet]) selCache[sheet] = {};
-  if (!selCache[sheet][newNum]) selCache[sheet][newNum] = {};
-  newRow.querySelectorAll('select[data-week]').forEach(sel => {
-    selCache[sheet][newNum][sel.dataset.week] = sel;
-  });
-  
-  lucide.createIcons();
+  rebuildOneSheet(sheet);
   recalc(sheet);
+  saveAll();
   showToast('Pelajar baru ditambah');
 }
 
@@ -802,18 +771,20 @@ function confirmDeleteStudent() {
   if (!deleteConfirmState) return;
   const { sheet, row } = deleteConfirmState;
   
-  // Clear the row data
+  if (ND[sheet]) delete ND[sheet][row];
+  if (CD[sheet]) delete CD[sheet][row];
+  if (AD[sheet]) delete AD[sheet][row];
+  
   const nameCell = document.querySelector(`.name-cell[data-sheet="${sheet}"][data-row="${row}"]`);
   const classCell = document.querySelector(`.class-cell[data-sheet="${sheet}"][data-row="${row}"]`);
   if (nameCell) nameCell.textContent = '';
   if (classCell) classCell.textContent = '';
-  
-  // Clear attendance data
   const selects = document.querySelectorAll(`select[data-sheet="${sheet}"][data-row="${row}"]`);
   selects.forEach(s => s.value = '');
   
   closeDeleteConfirm();
   recalc(sheet);
+  saveAll();
   showToast('Pelajar telah dipadam');
 }
 
