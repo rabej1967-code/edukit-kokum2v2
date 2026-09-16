@@ -410,7 +410,8 @@ function recalc(sheet) {
     let rowH = 0;
     const sels = document.querySelectorAll(`select[data-sheet="${sheet}"][data-row="${i}"]`);
     sels.forEach(s => { if (s.value === 'H') rowH++; });
-    document.getElementById(`rowt_${sheet}_${i}`).textContent = rowH;
+    const rowEl = document.getElementById(`rowt_${sheet}_${i}`);
+    if (rowEl) rowEl.textContent = rowH;
     totalH += rowH;
     
     // Count current week only
