@@ -2126,55 +2126,7 @@ function printSijil(){
   win.document.write('<!DOCTYPE html><html><head><title>Sijil Kehadiran</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:'+font+'}body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f1f5f9;padding:20px}.box{'+borderCSS+'border-radius:12px;padding:40px;text-align:center;background:white;max-width:500px;width:100%;position:relative}'+innerBorderCSS+'.no-print{margin-bottom:16px}@media print{.no-print{display:none}}</style></head><body>'
     +'<div><div class="no-print" style="display:flex;justify-content:center;gap:10px;margin-bottom:16px"><button onclick="window.print()" style="background:#1e293b;color:white;border:none;border-radius:8px;padding:9px 20px;cursor:pointer;font-weight:700">Cetak</button><button onclick="window.close()" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:9px 16px;cursor:pointer">Tutup</button></div>'
     +'<div class="box">'+el.innerHTML+'</div></div>'
-    +'<script>
-// ── KEEP-ALIVE — pastikan Supabase tidak tidur ──────────────
-(function(){
-  var _kaUrl = typeof SUPA_URL !== 'undefined' ? SUPA_URL : (typeof SB_URL !== 'undefined' ? SB_URL : '');
-  var _kaKey = typeof SUPA_KEY !== 'undefined' ? SUPA_KEY : (typeof SB_KEY !== 'undefined' ? SB_KEY : '');
-  if (!_kaUrl || !_kaKey) return;
-  if (window._ekKaTimer) clearInterval(window._ekKaTimer);
-  window._ekKaTimer = setInterval(function(){
-    fetch(_kaUrl+'/rest/v1/', {headers:{'apikey':_kaKey,'Authorization':'Bearer '+_kaKey}}).catch(function(){});
-  }, 4*60*1000);
-  console.log('EduKit keep-alive started');
-})();
-</script>
-
-<style>
-.pwd-wrap{position:relative;display:inline-block;width:100%}
-.pwd-wrap input[type=password]{padding-right:36px !important;width:100%;box-sizing:border-box}
-.pwd-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:17px;user-select:none;opacity:.55;line-height:1}
-.pwd-eye:hover{opacity:1}
-</style>
-<script>
-(function(){
-  function wrapPwd(inp){
-    if(inp.dataset.pwdWrapped) return;
-    inp.dataset.pwdWrapped='1';
-    var wrap=document.createElement('span');
-    wrap.className='pwd-wrap';
-    inp.parentNode.insertBefore(wrap, inp);
-    wrap.appendChild(inp);
-    var eye=document.createElement('span');
-    eye.className='pwd-eye';
-    eye.innerHTML='\u{1F441}\uFE0F';
-    eye.onclick=function(){
-      if(inp.type==='password'){inp.type='text';eye.style.opacity='1';}
-      else{inp.type='password';eye.style.opacity='.55';}
-    };
-    wrap.appendChild(eye);
-  }
-  function scan(){
-    document.querySelectorAll('input[type=password]').forEach(wrapPwd);
-  }
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', scan);
-  } else { scan(); }
-  new MutationObserver(scan).observe(document.documentElement,{childList:true,subtree:true});
-})();
-</script>
-
-</body></html>');
+    +'</body></html>');
   win.document.close();
 }
 
