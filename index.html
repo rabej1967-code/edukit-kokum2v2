@@ -756,7 +756,7 @@ const savedBadge = localStorage.getItem('koko_badge');
 if (savedBadge) {
   window.elementSdk.setConfig({ school_badge: savedBadge });
 }
-switchUnit('PERSATUAN');
+/* switchUnit dipanggil selepas versi pantas dimuatkan */
 lucide.createIcons();
 </script>
 <div id="loginScreen" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e3a8a);z-index:9999;padding:16px">
@@ -783,6 +783,89 @@ lucide.createIcons();
 </div>
 <button id="k2Logout" style="display:none;position:fixed;bottom:14px;right:14px;z-index:9000;padding:8px 14px;border:0;border-radius:999px;background:#1e293b;color:#fff;font-size:12px;font-weight:600;cursor:pointer;opacity:.85">Log Keluar</button>
 <div id="k2Status" style="display:none;position:fixed;bottom:14px;left:14px;z-index:9000;padding:6px 12px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:11px;font-weight:600"></div>
+<script>
+/* Versi pantas: indeks sel sekali sahaja, bukan carian DOM berulang-ulang */
+(function(){
+  var live=null, idx=null, idxLen=-1;
+  function selIdx(){
+    if(!live) live=document.getElementById('sheetContainer').getElementsByTagName('select');
+    if(idx && idxLen===live.length) return idx;
+    var rows=new Map(), cells=new Map();
+    for(var i=0;i<live.length;i++){
+      var s=live[i], sh=s.dataset.sheet;
+      if(!sh) continue;
+      var k=sh+'|'+s.dataset.row, a=rows.get(k);
+      if(!a){ a=[]; rows.set(k,a); }
+      a.push(s); cells.set(k+'|'+s.dataset.week,s);
+    }
+    idx={rows:rows,cells:cells}; idxLen=live.length; return idx;
+  }
+  window.recalc=function(sheet){
+    var I=selIdx(), cw=0, maxRows=studentCount[sheet]||TOTAL_STUDENT;
+    for(var i=1;i<=maxRows;i++){
+      var arr=I.rows.get(sheet+'|'+i)||[], rowH=0;
+      for(var j=0;j<arr.length;j++){ if(arr[j].value==='H') rowH++; }
+      var el=document.getElementById('rowt_'+sheet+'_'+i);
+      if(el) el.textContent=rowH;
+      var c=I.cells.get(sheet+'|'+i+'|'+currentWeek);
+      if(c && c.value==='H') cw++;
+    }
+    var te=document.getElementById('total_'+sheet), pe=document.getElementById('pct_'+sheet);
+    if(te) te.textContent=cw;
+    if(pe) pe.textContent=((cw/maxRows)*100).toFixed(1)+'%';
+    updateOverallStats();
+    saveAll();
+  };
+  window.updateOverallStats=function(){
+    var I=selIdx(), wkTot=0, cumTot=0, cumCount=0;
+    ALL_SHEETS.forEach(function(sheet){
+      var rows=studentCount[sheet]||TOTAL_STUDENT;
+      for(var i=1;i<=rows;i++){
+        var c=I.cells.get(sheet+'|'+i+'|'+currentWeek);
+        if(c && c.value==='H') wkTot++;
+        var arr=I.rows.get(sheet+'|'+i)||[];
+        for(var j=0;j<arr.length;j++){ if(arr[j].value==='H') cumTot++; }
+      }
+      cumCount+=rows*TOTAL_WEEK;
+    });
+    document.getElementById('all_week_total').textContent=wkTot;
+    document.getElementById('all_cumulative_total').textContent=cumTot;
+    document.getElementById('current_week').textContent='M'+currentWeek;
+    var g=(cumTot/cumCount)*100||0;
+    document.getElementById('overall_grand').textContent=g.toFixed(1)+'%';
+    updateTingkatStats();
+  };
+  window.updateTingkatStats=function(){
+    var I=selIdx(), box=document.getElementById('tingkatStats');
+    box.innerHTML='';
+    ['T1','T2','T3','T4','T5','T6R','T6A'].forEach(function(t){
+      var hadir=0, count=0;
+      ['P_'+t,'B_'+t,'S_'+t].forEach(function(sheet){
+        var rows=studentCount[sheet]||TOTAL_STUDENT;
+        for(var i=1;i<=rows;i++){
+          var sel=I.cells.get(sheet+'|'+i+'|'+currentWeek);
+          if(sel && (sel.value==='H'||sel.value==='T')){ count++; if(sel.value==='H') hadir++; }
+        }
+      });
+      var stat=document.createElement('div');
+      stat.className='p-2 rounded text-center';
+      stat.style.background='#ffffff';
+      stat.style.borderLeft='3px solid #3b82f6';
+      stat.innerHTML='<div style="color:#64748b;font-size:10px">'+t+'</div><div style="color:#1e40af;font-weight:600;font-size:13px">'+hadir+'/'+(count||0)+'</div>';
+      box.appendChild(stat);
+    });
+  };
+  window.saveAll=function(){
+    selIdx();
+    var data={selects:[],names:[],classes:[],schoolName:document.getElementById('schoolName').textContent};
+    for(var i=0;i<live.length;i++){ if(live[i].dataset.sheet) data.selects.push(live[i].value); }
+    document.querySelectorAll('.name-cell').forEach(function(c){ data.names.push(c.textContent); });
+    document.querySelectorAll('.class-cell').forEach(function(c){ data.classes.push(c.textContent); });
+    localStorage.setItem('koko_v2',JSON.stringify(data));
+  };
+  switchUnit('PERSATUAN');
+})();
+</script>
 <script>
 (function(){
   var SB_URL='https://aowzftmdriukxbltjtpm.supabase.co';
