@@ -756,7 +756,7 @@ const savedBadge = localStorage.getItem('koko_badge');
 if (savedBadge) {
   window.elementSdk.setConfig({ school_badge: savedBadge });
 }
-showSheet('T1');
+switchUnit('PERSATUAN');
 lucide.createIcons();
 </script>
 <div id="loginScreen" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e3a8a);z-index:9999;padding:16px">
@@ -883,7 +883,7 @@ lucide.createIcons();
     try{
       var b=localStorage.getItem('koko_badge');
       if(b) window.elementSdk.setConfig({school_badge:b});
-      ALL_SHEETS.forEach(function(s){ recalc(s); });
+      recalc(activeSheet);
     }catch(e){ console.error(e); }
     $('app').style.display='block';
     $('k2Logout').style.display='block';
